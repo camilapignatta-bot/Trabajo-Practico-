@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Trabajo Práctico - Sistema de fila de atención</title>
+<style>
+  :root {
+    --bg: #0f1420;
+    --panel: #161d2e;
+    --panel-2: #1d2740;
+    --accent: #f2c94c;
+    --text: #eef1f8;
+    --muted: #9aa4bd;
+    --ok: #2ecc71;
+    --bad: #e74c3c;
+    --border: #2a3350;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: "Segoe UI", Roboto, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    justify-content: center;
+    padding: 40px 16px;
+  }
+  main { width: 100%; max-width: 640px; }
+  h1 { font-size: 22px; margin-bottom: 4px; }
+  p.subtitulo { color: var(--muted); margin-top: 0; font-size: 14px; margin-bottom: 24px; }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 22px;
+    margin-bottom: 18px;
+  }
+  .fila-agregar { display: flex; gap: 10px; }
+  input {
+    flex: 1;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+  }
+  button {
+    cursor: pointer;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 14px;
+    padding: 10px 16px;
+  }
+  button.primary { background: var(--accent); color: #14101a; }
+  button.primary:hover { filter: brightness(1.08); }
+  button.ghost { background: var(--panel-2); color: var(--text); border: 1px solid var(--border); }
+  button.danger { background: var(--bad); color: white; }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .resumen { display: flex; gap: 10px; margin-bottom: 18px; }
+  .resumen .pill {
+    flex: 1;
+    background: var(--panel-2);
+    border-radius: 10px;
+    padding: 12px;
+    text-align: center;
+  }
+  .resumen .pill .num { font-size: 22px; font-weight: 700; color: var(--accent); }
+  .resumen .pill .label { font-size: 11.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+
+  ul#lista-fila { list-style: none; margin: 0; padding: 0; }
+  ul#lista-fila li {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 10px;
+    background: var(--panel-2);
+    margin-bottom: 8px;
+  }
+  ul#lista-fila li.siguiente { outline: 2px solid var(--accent); }
+  .badge-orden {
+    background: var(--accent);
+    color: #14101a;
+    font-weight: 700;
+    border-radius: 50%;
+    width: 30px; height: 30px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+  .info-persona { flex: 1; }
+  .info-persona .nombre { font-weight: 600; }
+  .info-persona .espera { font-size: 12px; color: var(--muted); }
+  .vacio { color: var(--muted); font-size: 13.5px; text-align: center; padding: 18px 0; }
+
+  .stats-final .pill .num { font-size: 26px; }
+  #vista-estadisticas { display: none; }
+  #vista-normal { display: block; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Sistema de fila de atención</h1>
+  <p class="subtitulo">Trabajo práctico — cada persona se anota, recibe su número de orden de llegada y luego es atendida.</p>
+
+  <div id="vista-normal">
+    <div class="card">
+      <div class="fila-agregar">
+        <input id="input-nombre" type="text" placeholder="Nombre de la persona" onkeydown="if(event.key==='Enter') agregarPersona()" />
+        <button class="primary" onclick="agregarPersona()">Agregar a la fila</button>
+      </div>
+    </div>
+
+    <div class="resumen">
+      <div class="pill"><div class="num" id="live-en-fila">0</div><div class="label">En fila</div></div>
+      <div class="pill"><div class="num" id="live-anotados">0</div><div class="label">Anotados</div></div>
+      <div class="pill"><div class="num" id="live-atendidos">0</div><div class="label">Atendidos</div></div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <strong>Fila actual</strong>
+        <button class="ghost" id="btn-atender-siguiente" onclick="atenderSiguiente()">Atender siguiente ▶</button>
+      </div>
+      <ul id="lista-fila"></ul>
+      <p class="vacio" id="mensaje-vacio">No hay nadie en la fila.</p>
+    </div>
+
+    <button class="danger" onclick="limpiarPantalla()">Limpiar pantalla</button>
+  </div>
+
+  <div id="vista-estadisticas">
+    <div class="card stats-final">
+      <h2 style="margin-top:0;">Estadísticas finales</h2>
+      <div class="resumen">
+        <div class="pill"><div class="num" id="stat-anotados">0</div><div class="label">Se anotaron</div></div>
+        <div class="pill"><div class="num" id="stat-atendidos">0</div><div class="label">Fueron atendidos</div></div>
+        <div class="pill"><div class="num" id="stat-porcentaje">0%</div><div class="label">% atendidos</div></div>
+      </div>
+      <div class="resumen">
+        <div class="pill"><div class="num" id="stat-sin-atender">0</div><div class="label">Quedaron sin atender</div></div>
+        <div class="pill"><div class="num" id="stat-tiempo-promedio">0s</div><div class="label">Tiempo prom. de espera</div></div>
+      </div>
+      <button class="ghost" style="margin-top:6px;width:100%" onclick="reiniciarSistema()">Empezar de nuevo</button>
+    </div>
+  </div>
+</main>
+
+<script>
+  // ---------- Estado del sistema ----------
+  let contadorOrden = 0;   // número de orden de llegada: nunca retrocede ni se reutiliza
+  let fila = [];           // personas actualmente esperando: { orden, nombre, llegada }
+  let totalAnotados = 0;
+  let totalAtendidos = 0;
+  let sumaTiemposEsperaMs = 0; // para calcular el promedio al final
+
+  // ---------- Agregar una persona a la fila ----------
+  const agregarPersona = () => {
+    const input = document.getElementById("input-nombre");
+    const nombre = input.value.trim();
+
+    if (!nombre) {
+      input.focus();
+      return;
+    }
+
+    contadorOrden++;
+    totalAnotados++;
+    fila.push({
+      orden: contadorOrden,
+      nombre: nombre,
+      llegada: Date.now(),
+    });
+
+    input.value = "";
+    input.focus();
+    renderFila();
+  };
+
+  // ---------- Atender a una persona puntual (por su número de orden) ----------
+  const atenderPersona = (orden) => {
+    const indice = fila.findIndex((persona) => persona.orden === orden);
+    if (indice === -1) return;
+
+    const persona = fila[indice];
+    const tiempoEsperaMs = Date.now() - persona.llegada;
+    sumaTiemposEsperaMs += tiempoEsperaMs;
+    totalAtendidos++;
+
+    fila.splice(indice, 1); // la sacamos de la fila, ya fue atendida
+    renderFila();
+  };
+
+  // Plus: atender directamente a la primera persona de la fila (la que antes llegó)
+  const atenderSiguiente = () => {
+    if (fila.length === 0) return;
+    atenderPersona(fila[0].orden);
+  };
+
+  // ---------- Pintar la fila y los contadores en vivo ----------
+  const formatearEspera = (llegadaMs) => {
+    const segundos = Math.floor((Date.now() - llegadaMs) / 1000);
+    if (segundos < 60) return `hace ${segundos}s`;
+    const minutos = Math.floor(segundos / 60);
+    return `hace ${minutos} min`;
+  };
+
+  const renderFila = () => {
+    const lista = document.getElementById("lista-fila");
+    const mensajeVacio = document.getElementById("mensaje-vacio");
+
+    lista.innerHTML = "";
+
+    if (fila.length === 0) {
+      mensajeVacio.style.display = "block";
+    } else {
+      mensajeVacio.style.display = "none";
+      fila.forEach((persona, i) => {
+        const li = document.createElement("li");
+        if (i === 0) li.classList.add("siguiente");
+        li.innerHTML = `
+          <div class="badge-orden">${persona.orden}</div>
+          <div class="info-persona">
+            <div class="nombre">${persona.nombre}</div>
+            <div class="espera">${formatearEspera(persona.llegada)}${i === 0 ? " · siguiente en ser atendido" : ""}</div>
+          </div>
+          <button class="ghost" onclick="atenderPersona(${persona.orden})">Atender</button>
+        `;
+        lista.appendChild(li);
+      });
+    }
+
+    document.getElementById("live-en-fila").textContent = fila.length;
+    document.getElementById("live-anotados").textContent = totalAnotados;
+    document.getElementById("live-atendidos").textContent = totalAtendidos;
+    document.getElementById("btn-atender-siguiente").disabled = fila.length === 0;
+  };
+
+  // ---------- Limpiar pantalla: solo deja visibles las estadísticas ----------
+  const limpiarPantalla = () => {
+    const porcentaje = totalAnotados === 0 ? 0 : (totalAtendidos / totalAnotados) * 100;
+    const promedioSegundos = totalAtendidos === 0 ? 0 : Math.round(sumaTiemposEsperaMs / totalAtendidos / 1000);
+
+    document.getElementById("stat-anotados").textContent = totalAnotados;
+    document.getElementById("stat-atendidos").textContent = totalAtendidos;
+    document.getElementById("stat-porcentaje").textContent = `${porcentaje.toFixed(1)}%`;
+    document.getElementById("stat-sin-atender").textContent = totalAnotados - totalAtendidos;
+    document.getElementById("stat-tiempo-promedio").textContent = `${promedioSegundos}s`;
+
+    document.getElementById("vista-normal").style.display = "none";
+    document.getElementById("vista-estadisticas").style.display = "block";
+  };
+
+  // Plus: volver a arrancar todo el sistema desde cero
+  const reiniciarSistema = () => {
+    contadorOrden = 0;
+    fila = [];
+    totalAnotados = 0;
+    totalAtendidos = 0;
+    sumaTiemposEsperaMs = 0;
+
+    document.getElementById("vista-estadisticas").style.display = "none";
+    document.getElementById("vista-normal").style.display = "block";
+    renderFila();
+  };
+
+  // Refrescamos el "hace X segundos" de cada fila cada 5 segundos
+  setInterval(() => {
+    if (document.getElementById("vista-normal").style.display !== "none") {
+      renderFila();
+    }
+  }, 5000);
+
+  renderFila();
+</script>
+</body>
+</html>
