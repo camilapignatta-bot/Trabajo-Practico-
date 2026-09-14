@@ -111,7 +111,7 @@
   <div id="vista-normal">
     <div class="card">
       <div class="fila-agregar">
-        <input id="input-nombre" type="text" placeholder="Nombre de la persona" onkeydown="if(event.key==='Enter') agregarPersona()" />
+        <input id="input-nombre" type="text" placeholder="Nombre:" onkeydown="if(event.key==='Enter') agregarPersona()" />
         <button class="primary" onclick="agregarPersona()">Agregar a la fila</button>
       </div>
     </div>
@@ -196,7 +196,7 @@
     renderFila();
   };
 
-  // Plus: atender directamente a la primera persona de la fila (la que antes llegó)
+  // Extra:  atender directamente a la primera persona de la fila (la que antes llegó)
   const atenderSiguiente = () => {
     if (fila.length === 0) return;
     atenderPersona(fila[0].orden);
@@ -256,7 +256,7 @@
     document.getElementById("vista-estadisticas").style.display = "block";
   };
 
-  // Plus: volver a arrancar todo el sistema desde cero
+  // Extra, volver a arrancar todo el sistema desde cero
   const reiniciarSistema = () => {
     contadorOrden = 0;
     fila = [];
